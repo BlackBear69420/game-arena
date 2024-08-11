@@ -19,6 +19,7 @@ function App() {
   const [countdown, setCountdown] = useState(4);
   const [gameStarted, setGameStarted] = useState(false);
   const [showStartScreen, setShowStartScreen] = useState(true);
+  const [gameIntervalTime, setGameIntervalTime] = useState(100); // New state for interval time
 
   const handleKeyPress = (e) => {
     if (!gameStarted) return;
@@ -66,7 +67,7 @@ function App() {
     } else if (countdown === 0) {
       setGameStarted(true);
     }
-  }, [countdown,showStartScreen]);
+  }, [countdown, showStartScreen]);
 
   useEffect(() => {
     if (gameStarted && !gameOver) {
@@ -137,15 +138,19 @@ function App() {
         });
 
         setThrownBalls((prevBalls) => prevBalls.filter((ball) => ball.top > 0));
-      }, 200);
-
-      if (gameOver) {
-        clearInterval(gameInterval);
-      }
+      }, gameIntervalTime); // Use dynamic interval time
 
       return () => clearInterval(gameInterval);
     }
-  }, [gameStarted, gameOver, thrownBalls]);
+  }, [gameStarted, gameOver, thrownBalls, gameIntervalTime]);
+
+  useEffect(() => {
+    if (passedObstacles > 0 && passedObstacles % 20 === 0 && gameIntervalTime > 20) {
+      const newIntervalTime = 100 - Math.floor(passedObstacles / 20) * 10;
+      setGameIntervalTime(newIntervalTime); // Decrease interval time by 5 for every 20 obstacles
+    }
+  }, [passedObstacles, gameIntervalTime]);
+  
 
   const startGame = () => {
     setShowStartScreen(false);
@@ -164,6 +169,7 @@ function App() {
     setGameOver(false);
     setCountdown(4);
     setGameStarted(false);
+    setGameIntervalTime(100); // Reset interval time
   };
 
   return (
