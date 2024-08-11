@@ -1,30 +1,50 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './App.css';
 import playerCar from './assets/car.png';
 import obstacleCar from './assets/second.png';
+import fireball from './assets/fireball.png';
+import Start from './Start';
 
 function App() {
   const lanes = [0, 33.33, 66.66];
   const [carPosition, setCarPosition] = useState(1);
+  const [carVerticalPosition, setCarVerticalPosition] = useState(80);
+  const carPositionRef = useRef(carPosition);
+  const carVerticalPositionRef = useRef(carVerticalPosition);
   const [obstacles, setObstacles] = useState([]);
   const [balls, setBalls] = useState(3);
   const [thrownBalls, setThrownBalls] = useState([]);
   const [passedObstacles, setPassedObstacles] = useState(0);
   const [gameOver, setGameOver] = useState(false);
+  const [countdown, setCountdown] = useState(4);
+  const [gameStarted, setGameStarted] = useState(false);
+  const [showStartScreen, setShowStartScreen] = useState(true);
 
   const handleKeyPress = (e) => {
-    if (e.key === 'ArrowLeft' && carPosition > 0) {
+    if (!gameStarted) return;
+
+    if (e.key === 'ArrowLeft' && carPositionRef.current > 0) {
       setCarPosition((prevPos) => prevPos - 1);
+      carPositionRef.current = carPositionRef.current - 1;
     }
-    if (e.key === 'ArrowRight' && carPosition < lanes.length - 1) {
+    if (e.key === 'ArrowRight' && carPositionRef.current < lanes.length - 1) {
       setCarPosition((prevPos) => prevPos + 1);
+      carPositionRef.current = carPositionRef.current + 1;
     }
-    if (e.key === ' ') { // Spacebar to throw ball
+    if (e.key === 'ArrowUp' && carVerticalPositionRef.current > 0) {
+      setCarVerticalPosition((prevPos) => prevPos - 5);
+      carVerticalPositionRef.current = carVerticalPositionRef.current - 5;
+    }
+    if (e.key === 'ArrowDown' && carVerticalPositionRef.current < 80) {
+      setCarVerticalPosition((prevPos) => prevPos + 5);
+      carVerticalPositionRef.current = carVerticalPositionRef.current + 5;
+    }
+    if (e.key === ' ') {
       if (balls > 0) {
         setBalls((prevBalls) => prevBalls - 1);
         setThrownBalls((prevBalls) => [
           ...prevBalls,
-          { id: Math.random(), left: lanes[carPosition] + 15, top: 80 }
+          { id: Math.random(), left: lanes[carPositionRef.current] + 15, top: carVerticalPositionRef.current },
         ]);
       }
     }
@@ -35,97 +55,126 @@ function App() {
     return () => {
       window.removeEventListener('keydown', handleKeyPress);
     };
-  }, [carPosition, balls]);
+  }, [gameStarted]);
 
   useEffect(() => {
-    if (!gameOver) {
-      const interval = setInterval(() => {
+    if (countdown > 0 && !showStartScreen) {
+      const countdownInterval = setInterval(() => {
+        setCountdown((prevCountdown) => prevCountdown - 1);
+      }, 1000);
+      return () => clearInterval(countdownInterval);
+    } else if (countdown === 0) {
+      setGameStarted(true);
+    }
+  }, [countdown,showStartScreen]);
+
+  useEffect(() => {
+    if (gameStarted && !gameOver) {
+      const obstacleInterval = setInterval(() => {
         setObstacles((prevObstacles) => [
           ...prevObstacles,
-          { id: Math.random(), left: lanes[Math.floor(Math.random() * lanes.length)], top: 0 }
+          { id: Math.random(), left: lanes[Math.floor(Math.random() * lanes.length)], top: 0 },
         ]);
       }, Math.random() * 2000 + 500);
-      return () => clearInterval(interval);
+      return () => clearInterval(obstacleInterval);
     }
-  }, [gameOver]);
+  }, [gameStarted, gameOver]);
 
   useEffect(() => {
-    const gameInterval = setInterval(() => {
-      setObstacles((prevObstacles) => {
-        const newObstacles = prevObstacles.map((obs) => ({
-          ...obs,
-          top: obs.top + 5
-        }));
+    if (gameStarted && !gameOver) {
+      const gameInterval = setInterval(() => {
+        setObstacles((prevObstacles) => {
+          const newObstacles = prevObstacles.map((obs) => ({
+            ...obs,
+            top: obs.top + 5,
+          }));
 
-        const newBalls = thrownBalls.map((ball) => ({
-          ...ball,
-          top: ball.top - 5
-        }));
+          const newBalls = thrownBalls.map((ball) => ({
+            ...ball,
+            top: ball.top - 5,
+          }));
 
-        const remainingObstacles = newObstacles.filter((obs) => {
-          let hit = false;
+          const remainingObstacles = newObstacles.filter((obs) => {
+            let hit = false;
 
-          const updatedBalls = newBalls.filter((ball) => {
-            if (
-              Math.abs(ball.left - (obs.left + 15)) < 5 &&
-              Math.abs(ball.top - obs.top) < 10
-            ) {
-              hit = true;
+            const updatedBalls = newBalls.filter((ball) => {
+              if (
+                Math.abs(ball.left - (obs.left + 15)) < 5 &&
+                Math.abs(ball.top - obs.top) < 10
+              ) {
+                hit = true;
+                return false;
+              }
+              return true;
+            });
+
+            setThrownBalls(updatedBalls);
+
+            if (hit) {
               return false;
             }
+
+            if (obs.top >= 100) {
+              setPassedObstacles((prevCount) => prevCount + 1);
+              return false;
+            }
+
+            // Improved collision detection using refs
+            if (
+              obs.left === lanes[carPositionRef.current] &&
+              Math.abs(obs.top - carVerticalPositionRef.current) < 10
+            ) {
+              setGameOver(true);
+              setCarPosition(1);
+              setCarVerticalPosition(80);
+              return false;
+            }
+
             return true;
           });
 
-          setThrownBalls(updatedBalls);
-
-          if (hit) {
-            return false;
-          }
-
-          if (obs.top >= 100) {
-            setPassedObstacles((prevCount) => prevCount + 1);
-            return false;
-          }
-
-          if (obs.left === lanes[carPosition] && obs.top > 75) {
-            setGameOver(true);
-            setCarPosition(1);
-            return false;
-          }
-
-          return true;
+          return remainingObstacles;
         });
 
-        return remainingObstacles;
-      });
+        setThrownBalls((prevBalls) => prevBalls.filter((ball) => ball.top > 0));
+      }, 200);
 
-      setThrownBalls((prevBalls) => prevBalls.filter((ball) => ball.top > 0));
-    }, 100);
+      if (gameOver) {
+        clearInterval(gameInterval);
+      }
 
-    if (gameOver) {
-      clearInterval(gameInterval);
+      return () => clearInterval(gameInterval);
     }
+  }, [gameStarted, gameOver, thrownBalls]);
 
-    return () => clearInterval(gameInterval);
-  }, [carPosition, thrownBalls, gameOver]);
+  const startGame = () => {
+    setShowStartScreen(false);
+    setCountdown(4);
+  };
 
   const restartGame = () => {
     setCarPosition(1);
+    setCarVerticalPosition(80);
+    carPositionRef.current = 1;
+    carVerticalPositionRef.current = 80;
     setObstacles([]);
     setThrownBalls([]);
     setBalls(3);
     setPassedObstacles(0);
     setGameOver(false);
+    setCountdown(4);
+    setGameStarted(false);
   };
 
   return (
     <div className="game-container">
+       {showStartScreen && <Start startGame={startGame} />}
       <div className="road">
         <div
           className="car"
           style={{
             left: `${lanes[carPosition] + 15}%`,
-            top: '80%',
+            top: `${carVerticalPosition}%`,
             position: 'absolute',
             width: 50,
             height: 50,
@@ -146,12 +195,11 @@ function App() {
               left: `${ball.left}%`,
               top: `${ball.top}%`,
               position: 'absolute',
-              width: 20,
-              height: 20,
-              backgroundColor: 'red',
               borderRadius: 12,
             }}
-          ></div>
+          >
+            <img src={fireball} width={50} height={50} alt="Fireball" />
+          </div>
         ))}
 
         {obstacles.map((obs, index) => (
@@ -182,7 +230,19 @@ function App() {
               key={i}
               className="ball-status"
               style={{
-                backgroundColor: i < balls ? 'red' : 'white',
+                backgroundColor:
+                  countdown > 0
+                    ? i < 4 - countdown
+                      ? 'green'
+                      : '#ff0404'
+                    : balls > i
+                    ? 'transparent'
+                    : 'white',
+                backgroundImage:
+                  countdown === 0 && balls > i
+                    ? `url(${fireball})`
+                    : 'none',
+                backgroundSize: 'cover',
                 width: 20,
                 height: 20,
                 margin: '0 5px',
@@ -192,27 +252,18 @@ function App() {
           ))}
         </div>
         <div className="score">
-          <span>Passed: {Math.floor(passedObstacles / 2)}</span>
+          <span>Score: {Math.floor(passedObstacles / 2)}</span>
         </div>
       </div>
 
       {gameOver && (
         <div className="game-over">
           <h1>Game Over</h1>
-          <p> Your Score: {Math.floor(passedObstacles / 2)}</p>
-          <button
-            style={{
-              backgroundColor: 'white',
-              borderRadius: 20,
-              paddingLeft: 30,
-              paddingRight: 30,
-              paddingBottom: 10,
-              paddingTop: 10,
-            }}
-            onClick={restartGame}
-          >
-            Restart
-          </button>
+          <p>Your Score: {Math.floor(passedObstacles / 2)}</p>
+          <div className="restart-button" onClick={restartGame}>
+  Restart
+</div>
+
         </div>
       )}
     </div>

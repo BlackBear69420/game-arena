@@ -1,0 +1,50 @@
+/* Start.css */
+.start-container {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: rgba(0, 0, 0, 1);
+    padding: 40px;
+    border-radius: 15px;
+    text-align: center;
+    color: white;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+    z-index: 20000;
+  }
+  
+  .start-instructions h1 {
+    margin-bottom: 20px;
+    font-size: 2em;
+  }
+  
+  .start-instructions p {
+    margin-bottom: 30px;
+    font-size: 1.2em;
+  }
+  
+  .start-button {
+    display: inline-block;
+    background-color: #ff6347;
+    color: white;
+    padding: 15px 40px;
+    font-size: 18px;
+    font-weight: bold;
+    text-align: center;
+    border-radius: 25px;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.3s ease;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  }
+  
+  .start-button:hover {
+    background-color: #e5533d;
+    transform: translateY(-3px);
+  }
+  
+  .start-button:active {
+    background-color: #c14429;
+    transform: translateY(0);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+  }
+  
