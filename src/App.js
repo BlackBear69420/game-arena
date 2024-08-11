@@ -258,14 +258,14 @@ function App() {
           ))}
         </div>
         <div className="score">
-          <span>Score: {Math.floor(passedObstacles / 2)}</span>
+          <span>Score: {Math.floor(passedObstacles)}</span>
         </div>
       </div>
 
       {gameOver && (
         <div className="game-over">
           <h1>Game Over</h1>
-          <p>Your Score: {Math.floor(passedObstacles / 2)}</p>
+          <p>Your Score: {Math.floor(passedObstacles)}</p>
           <div className="restart-button" onClick={restartGame}>
   Restart
 </div>
